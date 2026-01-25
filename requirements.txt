@@ -1,0 +1,11 @@
+# Newsletter Expert MCP Server Dependencies
+
+# Core MCP
+mcp>=1.0.0
+
+# Already in main project (but listed for reference)
+openai>=1.0.0
+qdrant-client>=1.12.0
+python-dotenv>=1.0.0
+beautifulsoup4>=4.12.0
+tiktoken>=0.8.0
