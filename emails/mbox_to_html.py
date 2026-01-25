@@ -166,7 +166,8 @@ def split_mbox_to_html(mbox_path, output_dir):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Convert .mbox emails to individual .html files.")
     parser.add_argument("input_file", help="Path to the input .mbox file")
-    parser.add_argument("output_dir", help="Directory to save the html files")
+    parser.add_argument("output_dir", nargs='?', default="emails_to_html", 
+                        help="Directory to save the html files (default: emails_to_html)")
     
     args = parser.parse_args()
     
