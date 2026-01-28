@@ -224,7 +224,7 @@ The MCP (Model Context Protocol) server exposes the RAG system as tools that Cur
 **What happens:**
 - User types: "What newsletters did I get about AI?"
 - Cursor adds prompt to conversation history
-- Cursor prepares to send to Claude (LLM)
+- Cursor prepares to send to LLM (LLM)
 
 **Conversation state:**
 ```json
@@ -240,18 +240,18 @@ The MCP (Model Context Protocol) server exposes the RAG system as tools that Cur
 
 ---
 
-### Step 2: Cursor Sends to Claude with Tool List
+### Step 2: Cursor Sends to LLM with Tool List
 
-**Location:** Cursor → Claude API
+**Location:** Cursor → LLM API
 
 **What happens:**
 - Cursor loads MCP tool definitions from `gmail-takeout-rag` server
-- Cursor sends to Claude:
+- Cursor sends to LLM:
   - User message
   - Tool definitions (query_newsletters, list_newsletter_stats)
   - Conversation history
 
-**What Claude sees:**
+**What LLM sees:**
 ```json
 {
   "model": "claude-4.5-sonnet",
@@ -284,11 +284,11 @@ The MCP (Model Context Protocol) server exposes the RAG system as tools that Cur
 
 ---
 
-### Step 3: Claude Decides Which Tool to Call
+### Step 3: LLM Decides Which Tool to Call
 
-**Location:** Claude's reasoning (inside Claude)
+**Location:** LLM's reasoning (inside LLM)
 
-**Claude's thinking process:**
+**LLM's thinking process:**
 ```
 User wants to know about newsletters related to AI.
 
@@ -301,7 +301,7 @@ query_newsletters() is perfect for this! I'll call it with:
 - top_k: 5 (default)
 ```
 
-**Claude's response:**
+**LLM's response:**
 ```json
 {
   "content": null,
@@ -320,7 +320,7 @@ query_newsletters() is perfect for this! I'll call it with:
 
 **What you see in Cursor:**
 ```
-Claude is thinking...
+LLM is thinking...
 ✓ Calling query_newsletters(question="What newsletters did I get about AI?", top_k=5)
 ```
 
@@ -331,7 +331,7 @@ Claude is thinking...
 **Location:** Cursor MCP Client
 
 **What happens:**
-- Cursor receives tool call request from Claude
+- Cursor receives tool call request from LLM
 - Cursor identifies this is from `gmail-takeout-rag` MCP server
 - Cursor spawns/calls the MCP server process:
   ```bash
@@ -491,13 +491,13 @@ chunks = rag.retrieve_similar_chunks(question, top_k=5)
 
 ---
 
-### Step 9: MCP Server Formats Chunks for Claude
+### Step 9: MCP Server Formats Chunks for LLM
 
 **Location:** `mcp_server.py` → `handle_call_tool()`
 
 **What happens:**
 - Receives chunks from NewsletterRAG
-- Formats chunks with metadata for Claude to use
+- Formats chunks with metadata for LLM to use
 - Returns formatted context (no pre-generated answer)
 
 **Code execution:**
@@ -505,7 +505,7 @@ chunks = rag.retrieve_similar_chunks(question, top_k=5)
 # Retrieve chunks (R part)
 chunks = rag.retrieve_similar_chunks(question, top_k=top_k)
 
-# Format chunks for Claude to generate answer (AG part)
+# Format chunks for LLM to generate answer (AG part)
 context_parts = []
 for i, chunk in enumerate(chunks, 1):
     context_parts.append(
@@ -539,17 +539,17 @@ return [types.TextContent(type="text", text=response_text)]
 
 ---
 
-### Step 10: Claude Generates Answer from Chunks
+### Step 10: LLM Generates Answer from Chunks
 
-**Location:** Claude (second API call)
+**Location:** LLM (second API call)
 
 **What happens:**
-- Cursor sends conversation (with tool result containing chunks) back to Claude
-- Claude sees:
+- Cursor sends conversation (with tool result containing chunks) back to LLM
+- LLM sees:
   - Original question: "What newsletters did I get about AI?"
   - Tool result: Formatted chunks with context
 
-**Claude's thinking:**
+**LLM's thinking:**
 ```
 The user asked about AI newsletters.
 
@@ -562,7 +562,7 @@ The tool returned 5 relevant chunks:
 I need to synthesize an answer from these chunks, summarizing what newsletters the user received about AI.
 ```
 
-**Claude's response:**
+**LLM's response:**
 ```json
 {
   "content": "Based on your newsletter collection, you received several newsletters about AI:\n\n**1. Weekly AI Newsletter (May 2024)**\n   - From: ai-newsletter@example.com\n   - Covered machine learning trends and recent developments\n   - Relevance score: 0.892\n\n**2. AI Research Digest**\n   - Featured papers on neural networks and deep learning\n\n**3. Tech News: AI Edition**\n   - Industry news and startup funding in AI space\n\nThese newsletters covered topics including machine learning, neural networks, and AI industry developments."
@@ -591,7 +591,7 @@ I need to synthesize an answer from these chunks, summarizing what newsletters t
 **What happens:**
 - Cursor receives MCP response (formatted chunks)
 - Appends tool result to conversation history
-- Sends back to Claude with tool result
+- Sends back to LLM with tool result
 
 **Conversation state:**
 ```json
@@ -624,7 +624,7 @@ I need to synthesize an answer from these chunks, summarizing what newsletters t
 }
 ```
 
-**Key Point:** Tool result contains chunks, not a pre-generated answer. Claude will generate the answer.
+**Key Point:** Tool result contains chunks, not a pre-generated answer. LLM will generate the answer.
 
 ---
 
@@ -729,7 +729,7 @@ These newsletters covered topics including machine learning, neural networks, an
                         │
                         ▼
 ┌─────────────────────────────────────────────────────────────┐
-│ CURSOR → CLAUDE API                                         │
+│ CURSOR → LLM                                         │
 │ Sends:                                                      │
 │ - User message                                              │
 │ - Tool definitions                                          │
@@ -738,7 +738,7 @@ These newsletters covered topics including machine learning, neural networks, an
                         │
                         ▼
 ┌─────────────────────────────────────────────────────────────┐
-│ CLAUDE (LLM)                                                │
+│ LLM                                                │
 │ Reasoning:                                                  │
 │ "User wants AI newsletters.                                │
 │  query_newsletters() is perfect!"                          │
@@ -785,7 +785,7 @@ These newsletters covered topics including machine learning, neural networks, an
                         ▼
 ┌─────────────────────────────────────────────────────────────┐
 │ MCP SERVER                                                  │
-│ Formats chunks with metadata for Claude                     │
+│ Formats chunks with metadata for LLM                     │
 │ Returns: TextContent with formatted chunks                  │
 │ (No pre-generated answer - chunks only)                     │
 └─────────────────────────────────────────────────────────────┘
@@ -794,12 +794,12 @@ These newsletters covered topics including machine learning, neural networks, an
 ┌─────────────────────────────────────────────────────────────┐
 │ CURSOR                                                      │
 │ Appends tool result (chunks) to conversation                 │
-│ Sends back to Claude with tool result                      │
+│ Sends back to LLM with tool result                      │
 └─────────────────────────────────────────────────────────────┘
                         │
                         ▼
 ┌─────────────────────────────────────────────────────────────┐
-│ CLAUDE (LLM) - Second Call                                  │
+│ LLM - Second Call                                  │
 │ Sees:                                                       │
 │ - Original question                                         │
 │ - Tool result (formatted chunks)                            │
@@ -829,16 +829,16 @@ These newsletters covered topics including machine learning, neural networks, an
 sequenceDiagram
     participant User
     participant Cursor as Cursor IDE
-    participant Claude as Claude LLM
+    participant LLM as LLM
     participant MCP as MCP Server
     participant RAG as NewsletterRAG
     participant OpenAI as OpenAI API
     participant Qdrant as Qdrant DB
 
     User->>Cursor: "What newsletters did I get about AI?"
-    Cursor->>Claude: Send prompt + tool definitions
-    Claude->>Claude: Decide: use query_newsletters()
-    Claude->>Cursor: Return tool_call
+    Cursor->>LLM: Send prompt + tool definitions
+    LLM->>LLM: Decide: use query_newsletters()
+    LLM->>Cursor: Return tool_call
     Cursor->>MCP: Execute query_newsletters(question, top_k=5)
     MCP->>RAG: rag.retrieve_similar_chunks(question, top_k=5)
     
@@ -849,11 +849,11 @@ sequenceDiagram
     Qdrant-->>RAG: Top-5 chunks + metadata
     
     RAG-->>MCP: List of chunks with text, metadata, scores
-    MCP->>MCP: Format chunks for Claude
+    MCP->>MCP: Format chunks for LLM
     MCP-->>Cursor: Formatted chunks with context
-    Cursor->>Claude: Send conversation + tool result (chunks)
-    Claude->>Claude: Generate answer from chunks (AG part)
-    Claude-->>Cursor: Final formatted answer
+    Cursor->>LLM: Send conversation + tool result (chunks)
+    LLM->>LLM: Generate answer from chunks (AG part)
+    LLM-->>Cursor: Final formatted answer
     Cursor-->>User: Display answer with sources
 ```
 
@@ -863,12 +863,12 @@ sequenceDiagram
 
 1. **Two-Stage Pipeline:**
    - **Indexing** (one-time): .mbox → HTML → Extract → Chunk → Embed → Qdrant
-   - **Querying** (on-demand): Question → Embed → Search → Format → Generate (by Claude)
+   - **Querying** (on-demand): Question → Embed → Search → Format → Generate (by LLM)
 
 2. **RAG Architecture (Separation of Concerns):**
    - **Retrieval (R)**: NewsletterRAG handles embedding queries and searching Qdrant
    - **Augmentation**: Context from retrieved chunks formatted by MCP server
-   - **Generation (AG)**: Claude (or caller's LLM) creates answer from context + question
+   - **Generation (AG)**: LLM (or caller's LLM) creates answer from context + question
    - **Benefit**: NewsletterRAG focuses on retrieval; generation handled by caller
 
 3. **Vector Search:**
@@ -880,14 +880,14 @@ sequenceDiagram
    - Cursor orchestrates tool calls
    - MCP server exposes retrieval as tools
    - NewsletterRAG does retrieval only (R part)
-   - Claude handles generation (AG part) - no double processing!
+   - LLM handles generation (AG part) - no double processing!
 
 5. **Components:**
    - **Preprocessor**: Extracts and cleans email data
    - **Chunker**: Splits text into searchable chunks
    - **NewsletterRAG**: Retrieves relevant chunks (R only)
-   - **MCP Server**: Formats chunks for Claude
-   - **Claude**: Generates answer from chunks (AG)
+   - **MCP Server**: Formats chunks for LLM
+   - **LLM**: Generates answer from chunks (AG)
 
 ---
 
@@ -902,7 +902,7 @@ Newsletter RAG initialized
 
 **OpenAI API calls:**
 - Embedding creation (for query) - only for retrieval
-- No chat completion in NewsletterRAG (generation handled by Claude)
+- No chat completion in NewsletterRAG (generation handled by LLM)
 
 **Qdrant queries:**
 - Vector similarity search logs (if enabled)
