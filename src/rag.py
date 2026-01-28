@@ -1,7 +1,8 @@
 """
 Newsletter RAG System
 
-Handles retrieval and generation for newsletter queries.
+Focuses on retrieval (R) - embedding queries and searching Qdrant vector database.
+Generation (AG) should be handled by the caller (MCP server, CLI, etc.) using their own LLM.
 """
 
 from typing import List, Dict, Any, Optional
@@ -54,7 +55,7 @@ class NewsletterRAG:
         """Verify connection to Qdrant and collection exists."""
         try:
             collection_info = self.qdrant_client.get_collection(self.collection_name)
-            print(f"✅ Connected to Qdrant collection '{self.collection_name}'")
+            print(f"Connected to Qdrant collection '{self.collection_name}'")
             print(f"   Vectors: {collection_info.points_count}")
         except Exception as e:
             raise ConnectionError(f"Failed to connect to Qdrant collection: {e}")
@@ -108,7 +109,11 @@ class NewsletterRAG:
         max_tokens: int = 500
     ) -> str:
         """
-        Generate an answer using retrieved chunks as context.
+        [DEPRECATED] Generate an answer using retrieved chunks as context.
+        
+        This method is kept for backward compatibility. For new code, prefer:
+        - Use retrieve_similar_chunks() to get chunks
+        - Handle generation in your own code (MCP server, CLI, etc.)
         
         Args:
             query: User's question
@@ -119,6 +124,12 @@ class NewsletterRAG:
         Returns:
             Generated answer string
         """
+        import warnings
+        warnings.warn(
+            "generate_answer() is deprecated. Use retrieve_similar_chunks() and handle generation in your caller.",
+            DeprecationWarning,
+            stacklevel=2
+        )
         # Build context from retrieved chunks
         context_parts = []
         for i, chunk in enumerate(retrieved_chunks, 1):
@@ -166,7 +177,11 @@ ANSWER:"""
         max_tokens: int = 500
     ) -> Dict[str, Any]:
         """
-        Complete RAG pipeline: retrieve + generate.
+        [DEPRECATED] Complete RAG pipeline: retrieve + generate.
+        
+        This method is kept for backward compatibility. For new code, prefer:
+        - Use retrieve_similar_chunks() to get chunks
+        - Handle generation in your own code (MCP server, CLI, etc.)
         
         Args:
             question: User's question
@@ -177,6 +192,12 @@ ANSWER:"""
         Returns:
             Dictionary with 'answer' and 'sources'
         """
+        import warnings
+        warnings.warn(
+            "query() is deprecated. Use retrieve_similar_chunks() and handle generation in your caller.",
+            DeprecationWarning,
+            stacklevel=2
+        )
         # Retrieve relevant chunks
         chunks = self.retrieve_similar_chunks(question, top_k=top_k)
         
