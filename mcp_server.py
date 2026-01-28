@@ -32,9 +32,9 @@ def initialize_rag():
             qdrant_port=6333,
             collection_name="newsletter_chunks"
         )
-        print("✅ Newsletter RAG initialized", file=sys.stderr)
+        print("Newsletter RAG initialized", file=sys.stderr)
     except Exception as e:
-        print(f"❌ Failed to initialize RAG: {e}", file=sys.stderr)
+        print(f"Failed to initialize RAG: {e}", file=sys.stderr)
         raise
 
 
@@ -87,7 +87,7 @@ async def handle_call_tool(
     if not rag:
         return [types.TextContent(
             type="text",
-            text="❌ RAG system not initialized. Please check server logs."
+            text="RAG system not initialized. Please check server logs."
         )]
     
     if name == "query_newsletters":
@@ -98,27 +98,30 @@ async def handle_call_tool(
         if not question:
             return [types.TextContent(
                 type="text",
-                text="❌ Error: 'question' parameter is required"
+                text="Error: 'question' parameter is required"
             )]
         
         try:
-            # Query the RAG system
-            result = rag.query(question, top_k=top_k)
+            # Retrieve relevant chunks (R part of RAG)
+            chunks = rag.retrieve_similar_chunks(question, top_k=top_k)
             
-            # Format response
-            answer = result["answer"]
-            sources = result["sources"]
+            # Format chunks for Claude to use for generation (AG part)
+            # Claude will synthesize the answer from these chunks
+            context_parts = []
+            for i, chunk in enumerate(chunks, 1):
+                context_parts.append(
+                    f"[Source {i}] {chunk['subject']} (from {chunk['from']}, {chunk['date']})\n"
+                    f"Relevance score: {chunk['score']:.3f}\n"
+                    f"{chunk['text']}\n"
+                )
             
-            # Build response with sources
-            response_text = f"**Answer:**\n\n{answer}\n\n"
-            response_text += f"**Sources ({len(sources)} newsletters found):**\n\n"
+            context = "\n---\n".join(context_parts)
             
-            for i, source in enumerate(sources, 1):
-                response_text += f"{i}. **{source['subject']}**\n"
-                response_text += f"   From: {source['from']}\n"
-                response_text += f"   Date: {source['date']}\n"
-                response_text += f"   Relevance: {source['score']:.3f}\n"
-                response_text += f"   Preview: {source['text_preview']}\n\n"
+            # Return formatted context for Claude to generate answer
+            response_text = f"**Retrieved {len(chunks)} relevant newsletter chunks:**\n\n"
+            response_text += context
+            response_text += f"\n\n**Question:** {question}\n\n"
+            response_text += "Please synthesize an answer from the above newsletter chunks."
             
             return [types.TextContent(
                 type="text",
@@ -128,7 +131,7 @@ async def handle_call_tool(
         except Exception as e:
             return [types.TextContent(
                 type="text",
-                text=f"❌ Error querying newsletters: {str(e)}"
+                text=f"Error querying newsletters: {str(e)}"
             )]
     
     elif name == "list_newsletter_stats":
@@ -136,7 +139,7 @@ async def handle_call_tool(
             # Get collection info from Qdrant
             collection_info = rag.qdrant_client.get_collection(rag.collection_name)
             
-            stats_text = f"**Newsletter Collection Statistics:**\n\n"
+            stats_text = "**Newsletter Collection Statistics:**\n\n"
             stats_text += f"- Collection: `{rag.collection_name}`\n"
             stats_text += f"- Total chunks indexed: {collection_info.points_count}\n"
             stats_text += f"- Vector dimensions: {collection_info.config.params.vectors.size}\n"
@@ -151,13 +154,13 @@ async def handle_call_tool(
         except Exception as e:
             return [types.TextContent(
                 type="text",
-                text=f"❌ Error getting stats: {str(e)}"
+                text=f"Error getting stats: {str(e)}"
             )]
     
     else:
         return [types.TextContent(
             type="text",
-            text=f"❌ Unknown tool: {name}"
+            text=f"Unknown tool: {name}"
         )]
 
 
